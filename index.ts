@@ -14,29 +14,30 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 app.get('/:formId/filteredResponses', async (req: Request, res: Response) => {
-    try {
-        const { API_KEY: apiKey, API_URL: apiUrl } = process.env;
-        const formId = req.params.formId;
-        const filtersQuery = req.query?.filters ?? null;
-        const filters: Filter[] = filtersQuery ? JSON.parse(decodeURIComponent(filtersQuery as string)): [];
-        
-        const response: AxiosResponse = await axios.get(
-          `${apiUrl}/${formId}`, {
-              headers: {
-                  'Authorization': `Bearer ${apiKey}`
-                }
-        });
-
-        const filteredQuestions = applyFilters(response.data, filters);
+  try {
+      const { API_KEY: apiKey, API_URL: apiUrl } = process.env;
+      const formId = req.params.formId;
+      const filtersQuery = req.query?.filters ?? null;
+      const filters: Filter[] = filtersQuery ? JSON.parse(decodeURIComponent(filtersQuery as string)): [];
       
-        res.json({...response.data, questions: filteredQuestions});
-    } catch (error) {
-        if (error instanceof Error) {
-            console.error(error.message);
-        }
-      res.status(500).json(error);
-    }
-  });
+      const response = await axios.get(`${apiUrl}/${formId}`, {
+          headers: {
+              'Authorization': `Bearer ${apiKey}`
+          }
+      });
+
+      const filteredQuestions = applyFilters(response.data, filters);
+    
+      res.json({...response.data, questions: filteredQuestions});
+  } catch (error) {
+    const isAxiosError = axios.isAxiosError(error);
+    const errorMessage = isAxiosError ? error.response?.data?.message : 'An error occurred';
+    const errorCode = isAxiosError ? (error.response?.status || 500) : 500
+
+    res.status(errorCode).send(errorMessage);
+  }
+});
+
   
 
 app.listen(port, () => {
